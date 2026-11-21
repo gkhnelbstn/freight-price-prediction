@@ -1,0 +1,42 @@
+[project]
+name = "freight-price"
+version = "0.1.0"
+description = "Freight cost model on real USAID shipment data: P10/P50/P90 ranges, a baseline to beat, drift checks, MLflow registry and a FastAPI endpoint."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "fastapi>=0.115",
+    "mlflow>=3.1",
+    "pandas>=2.2",
+    "scikit-learn>=1.6",
+    "tabulate>=0.9",
+    "uvicorn>=0.30",
+]
+
+[project.scripts]
+freight = "freight.cli:main"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.27",
+    "pre-commit>=3.7",
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/freight"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
