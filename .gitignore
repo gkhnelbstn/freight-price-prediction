@@ -1,0 +1,18 @@
+.env
+
+# python
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+dist/
+
+# mlflow (local)
+mlflow.db
+mlruns/
+mlartifacts/
+
+# full-precision copies live in MLflow; only the rounded summary is committed
+reports/*.csv
+reports/*.json

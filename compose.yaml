@@ -1,0 +1,44 @@
+# docker compose up --build
+#   mlflow  tracking server + model registry   http://localhost:5000
+#   train   fits, evaluates, registers; promotes to @champion only if it beats the current one
+#   api     serves models:/freight-price@champion   http://localhost:8000/docs
+services:
+  mlflow:
+    build: .
+    command: >-
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+      --allowed-hosts mlflow:5000,localhost:5000,127.0.0.1:5000
+    user: root
+    volumes: [mlflow:/mlflow]
+    ports: ["5000:5000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 5s
+      retries: 30
+
+  train:
+    build: .
+    command: freight train
+    working_dir: /tmp
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    depends_on:
+      mlflow: {condition: service_healthy}
+
+  api:
+    build: .
+    command: freight serve --port 8000
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    ports: ["8000:8000"]
+    depends_on:
+      train: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      retries: 30
+
+volumes:
+  mlflow:

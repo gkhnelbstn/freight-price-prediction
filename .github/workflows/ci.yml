@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Lint
+        run: |
+          uv run ruff check
+          uv run ruff format --check
+      - name: Tests
+        run: uv run pytest -v
+      - name: Train twice; the second run must not replace the champion
+        run: |
+          uv run freight train | tee first.json
+          uv run freight train | tee second.json
+          grep -q '"promoted": true' first.json
+          grep -q '"promoted": false' second.json
+          git diff --exit-code reports/results.md  # committed results are what this code produces
+
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: MLflow + train + API
+        run: docker compose up --build --detach --wait
+      - name: curl returns a price
+        run: |
+          curl -fsS -X POST localhost:8000/predict -H 'content-type: application/json' -d '{
+            "country": "Nigeria", "shipment_mode": "Air", "vendor_inco_term": "N/A - From RDC",
+            "fulfill_via": "From RDC", "origin": "Aurobindo Unit III, India", "product_group": "ARV",
+            "weight_kg": 1500, "line_value_usd": 120000, "line_quantity": 4000}' | tee quote.json
+          python3 -c "import json; q=json.load(open('quote.json')); assert 0 < q['p10'] <= q['p50'] <= q['p90'], q"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST localhost:8000/predict \
+            -H 'content-type: application/json' -d '{"shipment_mode": "Rail"}')" = 422
+      - if: failure()
+        run: docker compose logs
