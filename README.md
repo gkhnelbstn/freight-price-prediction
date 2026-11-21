@@ -46,11 +46,11 @@ model is three gradient boosting regressors on log freight, one each for P10, P5
 
 | mode | shipments | baseline MAE | model MAE | baseline median error | model median error | P10–P90 holds the actual |
 |:--|--:|--:|--:|--:|--:|--:|
-| all | 2,036 | $12,695 | **$7,575** | 56% | **41%** | 72% |
-| Air | 1,259 | $8,113 | **$6,074** | 46% | **33%** | 75% |
-| Truck | 573 | $11,965 | **$6,866** | 72% | **50%** | 76% |
-| Air Charter | 152 | $55,570 | **$19,747** | 116% | **57%** | 34% |
-| Ocean | 52 | **$6,351** | $16,143 | **41%** | 157% | 56% |
+| all | 2,036 | $12,695 | **$7,543** | 56% | **40%** | 73% |
+| Air | 1,259 | $8,113 | **$5,998** | 46% | **33%** | 76% |
+| Truck | 573 | $11,965 | **$6,957** | 72% | **51%** | 78% |
+| Air Charter | 152 | $55,570 | **$19,776** | 116% | **58%** | 36% |
+| Ocean | 52 | **$6,351** | $15,658 | **41%** | 156% | 56% |
 
 Full table, feature importance and drift numbers: [reports/results.md](reports/results.md).
 CI regenerates that file and fails if it changes.
@@ -58,23 +58,23 @@ CI regenerates that file and fails if it changes.
 What the numbers say:
 
 - The model cuts the rate card's error by 40% overall and beats it on air, truck and charter.
-  The median shipment is still off by 41%, so treat P50 as a first quote and the range as the
+  The median shipment is still off by 40%, so treat P50 as a first quote and the range as the
   answer.
 - On ocean the rate card wins. Training has about 190 ocean shipments and the test years 52,
   too few for the trees. A client would get the rate card for ocean until more data comes in.
-- Weight does most of the work: shuffling it raises the median error by 35 points. Origin,
-  quantity and INCO term add 2 to 3 points each.
+- Weight does most of the work: shuffling it raises the median error by 36 points. Origin,
+  quantity and INCO term add 3 to 4 points each.
 
 ## The ranges
 
 Quantile trees come out overconfident. Fitted alone, the P10–P90 band held 57% of the test
 shipments instead of 80%. A conformal step fixes most of that: it measures how far the 2012
-shipments fall outside the band and widens the band by that much (in log space, so by 27%
-each side). On the test years the band then holds 72%.
+shipments fall outside the band and widens the band by that much (in log space, so by 29%
+each side). On the test years the band then holds 73%.
 
 The remaining gap is drift, and the drift check sees it. Between training and test, the mix of
 manufacturing sites (PSI 1.99), countries (1.53) and INCO terms (0.58) moved, and any PSI
-above 0.25 means retrain. Air charter, the mode that moved most, has the worst coverage at 34%.
+above 0.25 means retrain. Air charter, the mode that moved most, has the worst coverage at 36%.
 
 ## Drift and retraining
 

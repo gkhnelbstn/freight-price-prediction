@@ -83,7 +83,9 @@ def train(test_from: int, max_iter: int) -> dict:
 
     client = MlflowClient()
     version = info.registered_model_version
-    client.set_model_version_tag(NAME, version, "test_mae_usd", f"{metrics['test_mae_usd']:.2f}")
+    client.set_model_version_tag(
+        NAME, version, "test_mae_usd", repr(float(metrics["test_mae_usd"]))
+    )
     promoted = promote(client, version, metrics["test_mae_usd"])
     result = {"run_id": run.info.run_id, "version": version, "promoted": promoted, **metrics}
     print(json.dumps(result, indent=2, default=float))
